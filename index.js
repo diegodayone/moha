@@ -11,6 +11,8 @@ const myMiddleware = (req, resp, next) =>{
 
 const app = express() //create a new server
 
+app.use("/images", express.static("images")) //=> makes the images folder available via HTTP
+
 app.use(express.json()) //parse the content of the body as json object
 app.use(myMiddleware)
 app.use("/users", userService)
