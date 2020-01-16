@@ -4,18 +4,20 @@ const fs = require("fs")
 const multer = require("multer")
 const path = require("path")
 const { check, validationResult } = require("express-validator")
+const Users = require("./userModel")
 
 const router = express.Router()
 
-const loadUsers = () => {
-    const buffer = fs.readFileSync("users.json")
-    const bufferIntoString = buffer.toString()
-    const users = JSON.parse(bufferIntoString)
-    return users;
+const loadUsers = async () => {
+    return await Users.find()
+    // const buffer = fs.readFileSync("users.json")
+    // const bufferIntoString = buffer.toString()
+    // const users = JSON.parse(bufferIntoString)
+    // return users;
 }
 
-router.get("/", (req, res) => { //get the whole students
-    const users = loadUsers()
+router.get("/", async (req, res) => { //get the whole students
+    const users = await loadUsers()
     res.send(users)
 })
 
@@ -28,30 +30,30 @@ router.post("/",
         return res.status(422).json({ errors: errors.array() });
     }
 
-    const users = loadUsers();
-    users.push(req.body);
-    fs.writeFileSync("users.json", JSON.stringify(users))
-    res.send(req.body)
+    const newUser = Users.create(req.body)
+    
+    // const users = loadUsers();
+    // users.push(req.body);
+    // fs.writeFileSync("users.json", JSON.stringify(users))
+    res.send(newUser)
 })
 
 const multerConfig = multer({})
 
-router.post("/:email", multerConfig.single("bob"), (req,res)=>{
-    const users = loadUsers();
-    const user = users.find(u => u.email === req.params.email)
-    if (user)
+router.post("/:email", multerConfig.single("bob"), async (req,res)=>{
+    const url = "http://localhost:3456/images/" + req.file.originalname
+    const updateUser = await Users.findOneAndUpdate({ email: req.params.email}, {
+        image: url
+    })
+    console.log(updateUser)
+    if (updateUser)
     {
         const fileSavedIn = path.join(__dirname, "./images", req.file.originalname) //=> /images/filename
-        fs.writeFileSync(fileSavedIn , req.file.buffer) //write the picture in /images/filename
-
-        user.image = "http://localhost:3456/images/" + req.file.originalname
-        fs.writeFileSync("users.json", JSON.stringify(users))
-        res.send(user)
+        fs.writeFileSync(fileSavedIn, req.file.buffer) //write the picture in /images/filename
+        res.send(updateUser)
     }
-       
     else
         res.status(404).send("User not found!")
-    res.send("test")
 })
 
 router.get("/pdf", (req,res)=>{
@@ -93,37 +95,55 @@ router.get("/pdf", (req,res)=>{
     res.download("./output.pdf")
 })
 
-router.get("/:email", (req, res) => { //get the details of a single student
-    const users = loadUsers()
-    const user = users.find(u => u.email === req.params.email)
+router.get("/:email", async (req, res) => { //get the details of a single student
+    // const users = loadUsers()
+    // const user = users.find(u => u.email === req.params.email)
+    const user = await Users.findOne({ email: req.params.email})
     if (user)
         res.send(user)
     else
         res.status(404).send("User not found!")
 })
 
-router.put("/:email", (req,res)=>{
-    const users = loadUsers()
-    const user = users.find(u => u.email === req.params.email)
-    if (user){
-        user.name = req.body.name
-        fs.writeFileSync("users.json", JSON.stringify(users))
-        res.send(user)
-    }
+router.put("/:email", async (req,res)=>{
+    const result = await Users.findOneAndUpdate({ email: req.params.email}, //first is the query to select which document to update
+         {
+        ...req.body //second part are the property to update
+        })
+    
+    if (result)
+        res.send("OK")
+    else 
+        res.status(404).send("not found")
+
+
+    // const users = loadUsers()
+    // const user = users.find(u => u.email === req.params.email)
+    // if (user){
+    //     user.name = req.body.name
+    //     fs.writeFileSync("users.json", JSON.stringify(users))
+    //     res.send(user)
+    // }
       
-    else
-        res.status(404).send("User not found!")
+    // else
+    //     res.status(404).send("User not found!")
 })
 
-router.delete("/:email", (req,res)=>{
-    const users = loadUsers()
-    const toKeep = users.filter(u => u.email !== req.params.email)
-    if (toKeep.length === users.length)
-        res.status(404).send("Not found")
-    else     {
-        fs.writeFileSync("users.json", JSON.stringify(toKeep))
-        res.send("DELETED")
-    }
+router.delete("/:email",async (req,res)=>{
+
+    const result = await Users.findOneAndDelete({ email: req.params.email})
+    if (result)
+        res.send(result)
+    else 
+        res.status(404).send("not found")
+    // const users = loadUsers()
+    // const toKeep = users.filter(u => u.email !== req.params.email)
+    // if (toKeep.length === users.length)
+    //     res.status(404).send("Not found")
+    // else     {
+    //     fs.writeFileSync("users.json", JSON.stringify(toKeep))
+    //     res.send("DELETED")
+    // }
 })
 
 

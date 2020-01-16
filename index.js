@@ -1,6 +1,7 @@
 const express = require("express")
 const userService = require("./users")
 const fs = require("fs")
+const mongoose = require("mongoose")
 
 const myMiddleware = (req, resp, next) =>{
     //console.log(req)
@@ -25,4 +26,10 @@ app.get("/", (request, response) => {
     })
 })
 
-app.listen(3456, () => console.log("hey, the server is running on 3456"))
+app.listen(3456, () => {
+    console.log("hey, the server is running on 3456")
+    mongoose.connect("mongodb://127.0.0.1:27017/DiegoStrive", {  useNewUrlParser: true, useUnifiedTopology: true })
+            .then(
+                () => console.log("OK"), 
+                (err)=> console.log(err))
+})
